@@ -6,6 +6,7 @@ use support\Log;
 
 class Install
 {
+    const WEBMAN_PLUGIN = true;
 
     /**
      * @var array
