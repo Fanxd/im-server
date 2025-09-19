@@ -2,13 +2,10 @@
 
 namespace LeonIm\ImServer;
 
-use support\Log;
-
 class BusinessWorker extends \GatewayWorker\BusinessWorker
 {
     public function __construct($config)
     {
-        Log::info('leon ');
         foreach ($config as $key => $value) {
             $this->$key = $value;
         }

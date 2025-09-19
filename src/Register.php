@@ -2,14 +2,10 @@
 
 namespace LeonIm\ImServer;
 
-use support\Log;
-
 class Register extends \GatewayWorker\Register
 {
     public function __construct($config = [])
     {
-        Log::info('leon ');
-
         $propertyMap = [
             'secretKey',
         ];

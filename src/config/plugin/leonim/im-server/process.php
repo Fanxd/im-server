@@ -3,9 +3,6 @@
 use LeonIm\ImServer\BusinessWorker;
 use LeonIm\ImServer\Gateway;
 use LeonIm\ImServer\Register;
-use support\Log;
-
-Log::info('leon process');
 
 return [
     'gateway' => [

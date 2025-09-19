@@ -2,8 +2,6 @@
 
 namespace LeonIm\ImServer;
 
-use support\Log;
-
 class Install
 {
     const WEBMAN_PLUGIN = true;
@@ -22,7 +20,6 @@ class Install
      */
     public static function install(): void
     {
-        Log::info('leon install');
         static::installByRelation();
     }
 
@@ -32,7 +29,6 @@ class Install
      */
     public static function installByRelation(): void
     {
-        Log::info(static::$pathRelation);
         foreach (static::$pathRelation as $source => $dest) {
             if ($pos = strrpos($dest, '/')) {
                 $parent_dir = base_path() . '/' . substr($dest, 0, $pos);
