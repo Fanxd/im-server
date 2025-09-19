@@ -21,6 +21,7 @@ class Install
      */
     public static function install(): void
     {
+        Log::info('leon install');
         static::installByRelation();
     }
 
