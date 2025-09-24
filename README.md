@@ -16,7 +16,14 @@
    ```bash
    composer require leonim/im-server
     ```
-2. webman中执行启动命令：
+   
+2. 安装 webman-admin：
+
+   ```bash
+   composer require -W webman/admin  
+   ```
+   
+3. webman 中执行启动命令：
     ```bash
     php start.php start
     ```

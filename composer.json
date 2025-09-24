@@ -5,7 +5,8 @@
   "license": "MIT",
   "require": {
     "php": ">=8.1",
-    "workerman/gateway-worker": ">=3.0"
+    "workerman/gateway-worker": ">=3.0",
+    "tinywan/jwt": "^1.13"
   },
   "autoload": {
     "psr-4": {
