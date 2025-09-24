@@ -10,6 +10,7 @@ class Install
      * @var array
      */
     protected static array $pathRelation = array(
+        'plugin/leonim/app' => 'plugin/leonim/app',
         'plugin/leonim/gateway' => 'plugin/leonim/gateway',
         'config/plugin/leonim/im-server' => 'config/plugin/leonim/im-server',
     );
