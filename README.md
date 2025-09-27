@@ -17,15 +17,22 @@
    composer require -W webman/admin  
    ```
    
-2. 然后安装 leonim/im-server：
+2. 安装 leonim/im-server：
 
    ```bash
    composer require leonim/im-server
+    ```
+      
+3. 生成sql：
+
+   ```bash
+   php webman app-plugin:install leonim
     ```
    
 3. webman 中执行启动命令：
     ```bash
     php start.php start
     ```
+
 
 
