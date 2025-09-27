@@ -6,6 +6,9 @@
   "require": {
     "php": ">=8.1",
     "workerman/gateway-worker": ">=3.0",
+    "tinywan/exception-handler": "^1.6",
+    "webman/think-orm": "^2.1",
+    "tinywan/validate": "^1.0",
     "tinywan/jwt": "^1.13"
   },
   "autoload": {

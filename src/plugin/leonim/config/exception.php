@@ -1,5 +1,5 @@
 <?php
 
 return [
-    '' => support\exception\Handler::class,
+    '' => \Tinywan\ExceptionHandler\Handler::class,
 ];
