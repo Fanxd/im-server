@@ -1,6 +1,6 @@
 <?php
 
-namespace LeonIm\ImServer\leonim\api;
+namespace plugin\leonim\api;
 
 use plugin\admin\api\Menu;
 use support\Db;
