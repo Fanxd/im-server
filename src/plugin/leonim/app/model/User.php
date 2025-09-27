@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\leonim\app\model;
+namespace LeonIm\ImServer\leonim\app\model;
 
 class User extends Base
 {

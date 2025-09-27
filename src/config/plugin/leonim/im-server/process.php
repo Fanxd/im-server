@@ -24,7 +24,7 @@ return [
         'handler' => BusinessWorker::class,
         'count' => cpu_count() * 2,
         'constructor' => ['config' => [
-            'eventHandler' => \plugin\leonim\gateway\Events::class,
+            'eventHandler' => \LeonIm\ImServer\leonim\gateway\Events::class,
             'name' => 'ChatBusinessWorker',
             'registerAddress' => '127.0.0.1:1113',
         ]]

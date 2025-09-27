@@ -1,10 +1,9 @@
 <?php
-namespace plugin\leonim\app\controller;
+namespace LeonIm\ImServer\leonim\app\controller;
 
+use LeonIm\ImServer\leonim\app\model\FriendRequests;
+use LeonIm\ImServer\leonim\app\validate\FriendValidate;
 use plugin\admin\app\model\User;
-use plugin\leonim\app\model\FriendRequests;
-use plugin\leonim\app\model\Friends;
-use plugin\leonim\app\validate\FriendValidate;
 use support\Request;
 use support\Response;
 use Tinywan\Jwt\JwtToken;

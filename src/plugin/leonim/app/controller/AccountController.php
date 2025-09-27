@@ -1,9 +1,9 @@
 <?php
 
-namespace plugin\leonim\app\controller;
+namespace LeonIm\ImServer\leonim\app\controller;
 
-use plugin\leonim\app\model\User;
-use plugin\leonim\app\validate\AccountValidate;
+use LeonIm\ImServer\leonim\app\model\User;
+use LeonIm\ImServer\leonim\app\validate\AccountValidate;
 use support\Request;
 use support\Response;
 use think\db\exception\DataNotFoundException;

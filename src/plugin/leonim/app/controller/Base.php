@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\leonim\app\controller;
+namespace LeonIm\ImServer\leonim\app\controller;
 
 use support\Request;
 use support\Response;

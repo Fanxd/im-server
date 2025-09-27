@@ -1,9 +1,8 @@
 <?php
 
-namespace plugin\leonim\app\model;
+namespace LeonIm\ImServer\leonim\app\model;
 
 use DateTimeInterface;
-
 use support\think\Model;
 
 class Base extends Model

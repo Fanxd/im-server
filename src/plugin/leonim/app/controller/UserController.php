@@ -1,8 +1,8 @@
 <?php
-namespace plugin\leonim\app\controller;
+namespace LeonIm\ImServer\leonim\app\controller;
 
-use plugin\leonim\app\model\User;
-use plugin\leonim\app\validate\UserValidate;
+use LeonIm\ImServer\leonim\app\model\User;
+use LeonIm\ImServer\leonim\app\validate\UserValidate;
 use support\Request;
 use support\Response;
 use Tinywan\Jwt\JwtToken;

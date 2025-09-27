@@ -1,8 +1,6 @@
 <?php
-namespace plugin\leonim\app\middleware;
+namespace LeonIm\ImServer\leonim\app\middleware;
 
-use support\Log;
-use Tinywan\Jwt\JwtToken;
 use Tinywan\Jwt\Exception\JwtTokenException;
 use Webman\Http\Request;
 use Webman\Http\Response;
