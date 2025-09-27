@@ -9,7 +9,8 @@
     "tinywan/exception-handler": "^1.6",
     "webman/think-orm": "^2.1",
     "tinywan/validate": "^1.0",
-    "tinywan/jwt": "^1.13"
+    "tinywan/jwt": "^1.13",
+    "webman/console": "^2.1"
   },
   "autoload": {
     "psr-4": {
