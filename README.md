@@ -11,20 +11,21 @@
 
 ## 安装
 
-1. 在你的项目中使用 Composer 安装：
-
-   ```bash
-   composer require leonim/im-server
-    ```
-   
-2. 安装 webman-admin：
+1. 首先确保你已经安装 webman-admin：
 
    ```bash
    composer require -W webman/admin  
    ```
    
+2. 然后安装 leonim/im-server：
+
+   ```bash
+   composer require leonim/im-server
+    ```
+   
 3. webman 中执行启动命令：
     ```bash
     php start.php start
     ```
+
 
