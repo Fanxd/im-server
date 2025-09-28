@@ -5,7 +5,6 @@ namespace plugin\leonim\app\controller;
 use plugin\leonim\app\model\User;
 use support\Request;
 use support\Response;
-use Tinywan\Jwt\JwtToken;
 use Tinywan\Validate\Exception\ValidateException;
 
 /**

@@ -3,6 +3,7 @@
 use plugin\leonim\app\controller\AccountController;
 use plugin\leonim\app\controller\FriendController;
 use plugin\leonim\app\controller\UserController;
+use plugin\leonim\app\controller\ConversationController;
 use plugin\leonim\app\middleware\JwtAuthMiddleware;
 use Webman\Route;
 
@@ -44,6 +45,19 @@ Route::group('/app/im', function () {
         Route::get('/list', [FriendController::class, 'blacklist']);             // 获取黑名单列表
         Route::post('/add', [FriendController::class, 'addToBlacklist']);       // 加入黑名单
         Route::post('/remove', [FriendController::class, 'removeFromBlacklist']); // 从黑名单移除
+    });
+
+    // ------------------------
+    // 会话接口
+    // ------------------------
+    Route::group('/conversation', function () {
+        Route::post('/create', [ConversationController::class, 'create']);           // 创建会话
+        Route::post('/clear', [ConversationController::class, 'clearMessages']);     // 清空会话消息
+        Route::post('/delete', [ConversationController::class, 'delete']);           // 删除/退出会话
+        Route::post('/read', [ConversationController::class, 'setRead']);            // 设置会话已读
+        Route::get('/unread/total', [ConversationController::class, 'unreadTotal']); // 获取当前用户所有会话未读总数
+        Route::get('/list', [ConversationController::class, 'list']);                // 获取会话列表
+        Route::get('/detail', [ConversationController::class, 'detail']);            // 获取会话详情
     });
 })->middleware([
     JwtAuthMiddleware::class
