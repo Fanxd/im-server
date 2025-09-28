@@ -1,9 +1,11 @@
 <?php
 
-namespace LeonIm\ImServer\leonim\app\controller;
+namespace plugin\leonim\app\controller;
 
+use plugin\leonim\app\model\User;
 use support\Request;
 use support\Response;
+use Tinywan\Jwt\JwtToken;
 use Tinywan\Validate\Exception\ValidateException;
 
 /**
@@ -79,5 +81,10 @@ class Base
         if (!$validate->check($data)) {
             throw new ValidateException($validate->getError());
         }
+    }
+
+    protected function uuidToId($uuid): ?int
+    {
+        return User::uuidToId($uuid);
     }
 }

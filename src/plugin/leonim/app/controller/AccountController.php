@@ -1,9 +1,9 @@
 <?php
 
-namespace LeonIm\ImServer\leonim\app\controller;
+namespace plugin\leonim\app\controller;
 
-use LeonIm\ImServer\leonim\app\model\User;
-use LeonIm\ImServer\leonim\app\validate\AccountValidate;
+use plugin\leonim\app\model\User;
+use plugin\leonim\app\validate\AccountValidate;
 use support\Request;
 use support\Response;
 use think\db\exception\DataNotFoundException;
@@ -47,6 +47,7 @@ class AccountController extends Base
         // 生成 token
         $token = JwtToken::generateToken([
             'id' => $user->id,
+            'uuid' => $user->uuid,
             'username' => $user->username
         ]);
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace LeonIm\ImServer\leonim\app\model;
+namespace plugin\leonim\app\model;
 
 use DateTimeInterface;
 use support\think\Model;

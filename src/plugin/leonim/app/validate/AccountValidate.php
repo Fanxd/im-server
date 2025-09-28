@@ -1,6 +1,6 @@
 <?php
 
-namespace LeonIm\ImServer\leonim\app\validate;
+namespace plugin\leonim\app\validate;
 
 use Tinywan\Validate\Validate;
 

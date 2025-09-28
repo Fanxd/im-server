@@ -27,7 +27,7 @@ CREATE TRIGGER `wa_users_before_insert_set_uuid`
 BEGIN
     IF NEW.`uuid` IS NULL OR NEW.`uuid` = '' THEN
         SET NEW.`uuid` = UUID();
-    END IF;
+END IF;
 END$$
 
 DELIMITER ;
@@ -49,20 +49,47 @@ ALTER TABLE `wa_users`
 -- 好友申请表: wa_friend_requests
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `wa_friend_requests` (
-                                                    `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
-                                                    `from_user_id` int(11) NOT NULL COMMENT '申请人 ID',
-                                                    `to_user_id` int(11) NOT NULL COMMENT '接收申请用户 ID',
-                                                    `message` varchar(255) DEFAULT NULL COMMENT '申请留言',
-                                                    `status` int(11) NOT NULL DEFAULT '0' COMMENT '状态（0=未处理, 1=同意, 2=拒绝）',
-                                                    `is_read` int(11) NOT NULL DEFAULT '0' COMMENT '是否已读（0=未读, 1=已读）',
-                                                    `group_name` varchar(50) DEFAULT NULL COMMENT '分组（可为空）',
-                                                    `remark` varchar(50) DEFAULT NULL COMMENT '备注名（可为空）',
-                                                    `tags` varchar(255) DEFAULT NULL COMMENT '好友标签（可选，JSON 或逗号分隔）',
-                                                    `created_at` datetime DEFAULT NULL COMMENT '申请时间',
-                                                    `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
-                                                    PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='好友申请表';
-
+    `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `from_user_id` char(36) NOT NULL COMMENT '申请人 ID',
+    `to_user_id` char(36) NOT NULL COMMENT '接收申请用户 ID',
+    `message` varchar(255) DEFAULT NULL COMMENT '申请留言',
+    `status` int(11) NOT NULL DEFAULT '0' COMMENT '状态（0=未处理, 1=同意, 2=拒绝）',
+    `is_read` int(11) NOT NULL DEFAULT '0' COMMENT '是否已读（0=未读, 1=已读）',
+    `group_name` varchar(50) DEFAULT NULL COMMENT '好友分组（可为空）',
+    `remark` varchar(50) DEFAULT NULL COMMENT '备注名（可为空）',
+    `tags` varchar(255) DEFAULT NULL COMMENT '好友标签（可选，JSON 或逗号分隔）',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申请时间',
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='好友申请表';
+-- ============================================
+-- 好友表 wa_friends
+-- ============================================
+CREATE TABLE IF NOT EXISTS `wa_friends` (
+    `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` int(11) NOT NULL COMMENT '用户ID',
+    `friend_id` int(11) NOT NULL COMMENT '好友ID',
+    `remark` varchar(50) DEFAULT NULL COMMENT '好友备注名',
+    `group_name` varchar(50) DEFAULT NULL COMMENT '好友分组',
+    `tags` varchar(255) DEFAULT NULL COMMENT '好友标签（JSON 或逗号分隔）',
+    `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态（1=正常, 0=已删除/拉黑）',
+    `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `idx_user_friend` (`user_id`,`friend_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='好友关系表';
+-- ============================================
+-- 用户黑名单表 wa_user_blacklist
+-- ============================================
+CREATE TABLE `wa_user_blacklist` (
+    `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id` INT UNSIGNED NOT NULL COMMENT '操作者用户ID',
+    `blocked_user_id` INT UNSIGNED NOT NULL COMMENT '被拉黑用户ID',
+    `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uniq_user_blocked` (`user_id`, `blocked_user_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户黑名单表';
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

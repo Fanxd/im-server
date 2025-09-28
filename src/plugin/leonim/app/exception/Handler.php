@@ -1,8 +1,7 @@
 <?php
 
-namespace LeonIm\ImServer\leonim\app\exception;
+namespace plugin\leonim\app\exception;
 
-use Illuminate\Validation\ValidationException;
 use support\Request;
 use Tinywan\ExceptionHandler\Handler as ErrorHandler;
 use Tinywan\Jwt\Exception\JwtTokenException;

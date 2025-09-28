@@ -1,8 +1,8 @@
 <?php
-namespace LeonIm\ImServer\leonim\app\controller;
+namespace plugin\leonim\app\controller;
 
-use LeonIm\ImServer\leonim\app\model\User;
-use LeonIm\ImServer\leonim\app\validate\UserValidate;
+use plugin\leonim\app\model\User;
+use plugin\leonim\app\validate\UserValidate;
 use support\Request;
 use support\Response;
 use Tinywan\Jwt\JwtToken;
@@ -31,7 +31,7 @@ class UserController extends Base
                     ->whereOr('nickname', 'like', "%{$keyword}%")
                     ->whereOr('mobile', 'like', "%{$keyword}%");
             })
-            ->field('username,nickname,avatar,mobile')
+            ->field('uuid,username,nickname,avatar,mobile')
             ->limit(50)
             ->select()->toArray();
 

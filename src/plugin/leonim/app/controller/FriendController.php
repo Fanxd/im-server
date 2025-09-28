@@ -1,119 +1,355 @@
 <?php
-namespace LeonIm\ImServer\leonim\app\controller;
+namespace plugin\leonim\app\controller;
 
-use LeonIm\ImServer\leonim\app\model\FriendRequests;
-use LeonIm\ImServer\leonim\app\validate\FriendValidate;
-use plugin\admin\app\model\User;
+use plugin\leonim\app\model\FriendRequests;
+use plugin\leonim\app\model\Friends;
+use plugin\leonim\app\model\User;
+use plugin\leonim\app\model\UserBlacklist;
+use plugin\leonim\app\validate\FriendValidate;
 use support\Request;
 use support\Response;
-use Tinywan\Jwt\JwtToken;
 
+/**
+ * 好友与黑名单管理控制器
+ */
 class FriendController extends Base
 {
+    /**
+     * 添加好友
+     */
     public function add(Request $request): Response
     {
-        // 批量接收参数
-        $data = $this->input($request, ['friend_id', 'message' => '']);
+        $data = [
+            'friend_id' => $request->post('friend_id'),
+            'message'   => $request->post('message', ''),
+            'user_id'   => $request->user['id'],
+            'uuid'      => $request->user['uuid'],
+        ];
 
-        // 参数验证
+        // 验证添加好友逻辑，包括黑名单约束
         $this->validate($data, FriendValidate::class, 'add');
 
-        $userId = JwtToken::getCurrentId();
-        $friendId = (int)$data['friend_id'];
-
-        // 是否已有未处理申请
-        if (FriendRequests::where('from_user_id', $userId)
-            ->where('to_user_id', $friendId)
-            ->where('status', 0)
-            ->exists()) {
-            return $this->fail('好友请求已发送，请等待对方处理');
-        }
-
         FriendRequests::create([
-            'from_user_id' => $userId,
-            'to_user_id'   => $friendId,
+            'from_user_id' => $data['uuid'],
+            'to_user_id'   => $data['friend_id'],
             'message'      => $data['message'],
             'status'       => 0,
-            'is_read'      => 0
+            'is_read'      => 0,
         ]);
 
         return $this->success([], '好友请求已发送');
     }
 
+    /**
+     * 删除好友
+     */
     public function delete(Request $request): Response
     {
-        $friendId = $request->post('friend_id', 0);
+        $data = [
+            'friend_uuid' => $request->post('friend_uuid'),
+            'user_uuid'   => $request->user['uuid'],
+        ];
 
-        // TODO: 删除好友逻辑
+        $this->validate($data, FriendValidate::class, 'delete');
 
-        return json(['code'=>0, 'msg'=>'好友已删除']);
+        $userId   = User::uuidToId($data['user_uuid']);
+        $friendId = User::uuidToId($data['friend_uuid']);
+
+        Friends::where('user_id', $userId)->where('friend_id', $friendId)->delete();
+        Friends::where('user_id', $friendId)->where('friend_id', $userId)->delete();
+
+        return $this->success([], '删除好友成功');
     }
 
+    /**
+     * 同意好友申请
+     */
     public function accept(Request $request): Response
     {
-        $requestId = $request->post('request_id', 0);
+        $data = [
+            'request_id' => $request->post('request_id', 0),
+            'user_uuid'  => $request->user['uuid'],
+        ];
 
-        // TODO: 同意好友申请逻辑
+        // 验证请求是否合法 & 是否在黑名单中
+        $this->validate($data, FriendValidate::class, 'accept');
 
-        return json(['code'=>0, 'msg'=>'已同意好友申请']);
+        $friendRequest = FriendRequests::find($data['request_id']);
+
+        // 更新申请状态
+        $friendRequest->status = 1;
+        $friendRequest->is_read = 1;
+        $friendRequest->updated_at = date('Y-m-d H:i:s');
+        $friendRequest->save();
+
+        $fromUuid = User::uuidToId($friendRequest->from_user_id);
+        $toUuid   = User::uuidToId($friendRequest->to_user_id);
+
+        // 写入双方好友关系（双向）
+        if (!Friends::where('user_id', $fromUuid)->where('friend_id', $toUuid)->find()) {
+            Friends::create([
+                'user_id'   => $fromUuid,
+                'friend_id' => $toUuid,
+                'remark'    => $friendRequest->remark ?? '',
+                'group_name'=> $friendRequest->group_name ?? '',
+                'tags'      => $friendRequest->tags ?? '',
+                'created_at'=> date('Y-m-d H:i:s'),
+                'updated_at'=> date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        if (!Friends::where('user_id', $toUuid)->where('friend_id', $fromUuid)->find()) {
+            Friends::create([
+                'user_id'   => $toUuid,
+                'friend_id' => $fromUuid,
+                'remark'    => '',
+                'group_name'=> '',
+                'tags'      => '',
+                'created_at'=> date('Y-m-d H:i:s'),
+                'updated_at'=> date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        return $this->success([], '已同意好友申请');
     }
 
+    /**
+     * 拒绝好友申请
+     */
     public function reject(Request $request): Response
     {
         $requestId = $request->post('request_id', 0);
+        $userUuid  = $request->user['uuid'];
 
-        // TODO: 拒绝好友申请逻辑
+        $updated = FriendRequests::where('id', $requestId)
+            ->where('to_user_id', $userUuid)
+            ->where('status', 0)
+            ->update([
+                'status' => 2,
+                'is_read' => 1,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
 
-        return json(['code'=>0, 'msg'=>'已拒绝好友申请']);
+        if (!$updated) {
+            return $this->fail('好友申请已处理或不存在');
+        }
+
+        return $this->success([], '已拒绝好友申请');
     }
 
+    /**
+     * 获取好友申请列表
+     */
     public function requests(Request $request): Response
     {
-        // TODO: 查询好友申请列表
-        $data = [];
+        $userId = $request->user['uuid'];
+        $page   = (int)$request->get('page', 1);
+        $limit  = (int)$request->get('limit', 20);
 
-        return json(['code'=>0, 'msg'=>'获取成功', 'data'=>$data]);
+        $query = FriendRequests::where('to_user_id', $userId)
+            ->with(['fromUser'])
+            ->order('created_at', 'desc');
+
+        $list = $query->page($page, $limit)->select();
+
+        $data = [];
+        foreach ($list as $item) {
+            $data[] = [
+                'request_id'   => $item->id,
+                'from_user_id' => $item->from_user_id,
+                'nickname'     => $item->fromUser->nickname ?? '',
+                'avatar'       => $item->fromUser->avatar ?? '',
+                'message'      => $item->message,
+                'status'       => $item->status,
+                'is_read'      => $item->is_read,
+                'created_at'   => $item->created_at,
+                'updated_at'   => $item->updated_at,
+            ];
+        }
+
+        $unreadCount = FriendRequests::where('to_user_id', $userId)
+            ->where('is_read', 0)
+            ->count();
+
+        return $this->success([
+            'list'        => $data,
+            'unreadCount' => $unreadCount,
+            'page'        => $page,
+            'limit'       => $limit,
+        ]);
     }
 
+    /**
+     * 获取未读好友申请数量
+     */
     public function unreadCount(Request $request): Response
     {
-        // TODO: 查询未读好友申请数量
-        $count = 0;
+        $userUuid = $request->user['uuid'];
+        $count = FriendRequests::where('to_user_id', $userUuid)
+            ->where('status', 0)
+            ->where('is_read', 0)
+            ->count();
 
-        return json(['code'=>0, 'msg'=>'获取成功', 'data'=>['unread_count'=>$count]]);
+        return $this->success(['unread_count' => $count], '获取成功');
     }
 
+    /**
+     * 查询好友列表
+     */
     public function list(Request $request): Response
     {
-        // TODO: 查询好友列表
-        $friends = [];
+        $userId      = $request->user['id'];
+        $keyword     = $request->get('keyword', '');
+        $page        = (int)$request->get('page', 1);
+        $limit       = (int)$request->get('limit', 10);
+        $enableGroup = (int)$request->get('group', 0);
 
-        return json(['code'=>0, 'msg'=>'获取成功', 'data'=>$friends]);
+        $query = Friends::alias('f')
+            ->join('wa_users u', 'u.id = f.friend_id')
+            ->where('f.user_id', $userId);
+
+        if ($keyword !== '') {
+            $query->where(function ($q) use ($keyword) {
+                $q->whereLike('u.nickname', "%{$keyword}%")
+                    ->whereOrLike('f.remark', "%{$keyword}%")
+                    ->whereOrLike('f.group_name', "%{$keyword}%");
+            });
+        }
+
+        $total = $query->count();
+        $list = $query->page($page, $limit)
+            ->order('f.id', 'desc')
+            ->field('f.id, f.remark, f.group_name, f.tags, u.nickname, u.avatar, u.uuid')
+            ->select();
+
+        if ($enableGroup !== 1) {
+            return $this->success([
+                'total' => $total,
+                'page'  => $page,
+                'limit' => $limit,
+                'list'  => $list,
+            ]);
+        }
+
+        // 按分组返回
+        $grouped = [];
+        foreach ($list as $item) {
+            $groupName = $item->group_name ?: '默认分组';
+            $grouped[$groupName][] = [
+                'friend_uuid' => $item->uuid,
+                'nickname'    => $item->nickname,
+                'avatar'      => $item->avatar,
+                'remark'      => $item->remark,
+                'tags'        => $item->tags,
+            ];
+        }
+
+        return $this->success([
+            'total'  => $total,
+            'page'   => $page,
+            'limit'  => $limit,
+            'groups' => $grouped,
+        ]);
     }
 
+    /**
+     * 查询黑名单列表
+     */
     public function blacklist(Request $request): Response
     {
-        // TODO: 查询黑名单列表
-        $blacklist = [];
+        $userId  = $request->user['id'];
+        $page    = (int)$request->get('page', 1);
+        $limit   = (int)$request->get('limit', 20);
+        $keyword = $request->get('keyword', '');
 
-        return json(['code'=>0, 'msg'=>'获取成功', 'data'=>$blacklist]);
+        $query = UserBlacklist::where('user_id', $userId)
+            ->with(['blockedUser' => function ($q) use ($keyword) {
+                if ($keyword) {
+                    $q->where('username', 'like', "%{$keyword}%")
+                        ->whereOr('nickname', 'like', "%{$keyword}%");
+                }
+            }])
+            ->order('created_at', 'desc');
+
+        $list = $query->page($page, $limit)->select();
+        $filteredList = $list->filter(fn($item) => $item->blockedUser !== null);
+
+        $total = UserBlacklist::where('user_id', $userId)
+            ->Haswhere('blockedUser', function ($q) use ($keyword) {
+                if ($keyword) {
+                    $q->where('username', 'like', "%{$keyword}%")
+                        ->whereOr('nickname', 'like', "%{$keyword}%");
+                }
+            })->count();
+
+        $data = $filteredList->map(fn($item) => [
+            'id'         => $item->id,
+            'uuid'       => $item->blockedUser->uuid,
+            'username'   => $item->blockedUser->username,
+            'nickname'   => $item->blockedUser->nickname,
+            'avatar'     => $item->blockedUser->avatar,
+            'created_at' => $item->created_at,
+        ]);
+
+        return $this->success([
+            'total' => $total,
+            'list'  => $data,
+        ]);
     }
 
+    /**
+     * 加入黑名单
+     */
     public function addToBlacklist(Request $request): Response
     {
-        $friendId = $request->post('friend_id', 0);
+        $currentUserId = $request->user['id'];
+        $blockedUuid   = $request->post('blocked_uuid');
 
-        // TODO: 添加到黑名单逻辑
+        $this->validate([
+            'blocked_uuid' => $blockedUuid,
+            'user_id'      => $currentUserId,
+        ], FriendValidate::class, 'black_add');
 
-        return json(['code'=>0, 'msg'=>'已加入黑名单']);
+        $blockedUser = User::where('uuid', $blockedUuid)->find();
+
+        // 删除好友关系
+        Friends::where(function ($q) use ($currentUserId, $blockedUser) {
+            $q->where('user_id', $currentUserId)->where('friend_id', $blockedUser->id);
+        })->delete();
+
+        Friends::where(function ($q) use ($currentUserId, $blockedUser) {
+            $q->where('user_id', $blockedUser->id)->where('friend_id', $currentUserId);
+        })->delete();
+
+        UserBlacklist::create([
+            'user_id'         => $currentUserId,
+            'blocked_user_id' => $blockedUser->id,
+            'created_at'      => date('Y-m-d H:i:s'),
+        ]);
+
+        return $this->success([], '已加入黑名单');
     }
 
+    /**
+     * 从黑名单移除
+     */
     public function removeFromBlacklist(Request $request): Response
     {
-        $friendId = $request->post('friend_id', 0);
+        $data = [
+            'blocked_uuid' => $request->post('blocked_uuid'),
+            'user_id'      => $request->user['id'],
+        ];
 
-        // TODO: 从黑名单移除逻辑
+        $this->validate($data, FriendValidate::class, 'black_remove');
 
-        return json(['code'=>0, 'msg'=>'已移出黑名单']);
+        $blockedUser = User::where('uuid', $data['blocked_uuid'])->find();
+
+        $record = UserBlacklist::where('user_id', $data['user_id'])
+            ->where('blocked_user_id', $blockedUser->id)
+            ->find();
+
+        if ($record) $record->delete();
+
+        return $this->success([], '已将用户移出黑名单');
     }
 }

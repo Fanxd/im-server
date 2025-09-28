@@ -1,5 +1,5 @@
 <?php
-namespace LeonIm\ImServer\leonim\gateway;
+namespace plugin\leonim\gateway;
 
 use GatewayWorker\Lib\Gateway;
 use Workerman\Worker;

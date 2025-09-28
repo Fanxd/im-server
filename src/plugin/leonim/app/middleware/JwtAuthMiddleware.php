@@ -1,7 +1,9 @@
 <?php
-namespace LeonIm\ImServer\leonim\app\middleware;
+namespace plugin\leonim\app\middleware;
 
+use support\Log;
 use Tinywan\Jwt\Exception\JwtTokenException;
+use Tinywan\Jwt\JwtToken;
 use Webman\Http\Request;
 use Webman\Http\Response;
 use Webman\MiddlewareInterface;
@@ -36,6 +38,19 @@ class JwtAuthMiddleware implements MiddlewareInterface
             } else {
                 throw new JwtTokenException('无效的 token 格式');
             }
+
+            // 使用 verify 方法
+            $result = JwtToken::verify(1, $token);
+
+            // 返回user信息
+            $payload = $result['extend'] ?? [];
+
+            if (empty($payload)) {
+                throw new JwtTokenException('Token 解析失败');
+            }
+
+            // ✅ 注入 request->user
+            $request->user = $payload;
 
             return $next($request);
 
