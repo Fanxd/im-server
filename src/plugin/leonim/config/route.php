@@ -1,11 +1,13 @@
 <?php
 
+use plugin\leonim\app\middleware\CorsMiddleware;
 use plugin\leonim\app\controller\AccountController;
 use plugin\leonim\app\controller\FriendController;
 use plugin\leonim\app\controller\UserController;
 use plugin\leonim\app\controller\ConversationController;
 use plugin\leonim\app\middleware\JwtAuthMiddleware;
 use Webman\Route;
+use support\Request;
 
 // Leon IM 相关路由
 Route::group('/app/im', function () {
@@ -60,6 +62,17 @@ Route::group('/app/im', function () {
         Route::get('/detail', [ConversationController::class, 'detail']);            // 获取会话详情
     });
 })->middleware([
-    JwtAuthMiddleware::class
+    CorsMiddleware::class,
+    JwtAuthMiddleware::class,
 ]);
 
+Route::fallback(function (Request $request) {
+    $response = strtoupper($request->method()) === 'OPTIONS' ? response('', 204) : response('', 404);
+    $response->withHeaders([
+        'Access-Control-Allow-Credentials' => 'true',
+        'Access-Control-Allow-Origin' => "*",
+        'Access-Control-Allow-Methods' => '*',
+        'Access-Control-Allow-Headers' => '*',
+    ]);
+    return $response;
+});

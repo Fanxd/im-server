@@ -12,7 +12,7 @@ class Events
      */
     public static function onWorkerStart(Worker $worker): void
     {
-        echo "BusinessWorker {$worker->id} started\n";
+//        echo "BusinessWorker {$worker->id} started\n";
     }
 
     /**
