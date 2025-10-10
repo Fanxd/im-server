@@ -13,6 +13,11 @@ class User extends Base
         return self::where('uuid', $uuid)->value('id');
     }
 
+    public static function idToUuid($id)
+    {
+        return self::where('id', $id)->value('uuid');
+    }
+
     public function getAvatarAttr($value)
     {
         if (!str_contains($value, 'http') && !str_contains($value, 'https')) {

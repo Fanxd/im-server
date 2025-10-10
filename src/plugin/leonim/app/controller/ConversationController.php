@@ -1,10 +1,12 @@
 <?php
+
 namespace plugin\leonim\app\controller;
 
-use plugin\leonim\app\model\Conversations;
 use plugin\leonim\app\model\ConversationMembers;
+use plugin\leonim\app\model\Conversations;
 use plugin\leonim\app\model\Messages;
 use plugin\leonim\app\model\MessageUserDeleted;
+use plugin\leonim\app\model\User;
 use plugin\leonim\app\validate\ConversationValidate;
 use support\Request;
 use support\Response;
@@ -26,10 +28,10 @@ class ConversationController extends Base
         // 单聊：检查是否已有会话
         if ($type === 1) {
             $conversation = Conversations::where('type', 1)
-                ->hasWhere('members', function($q) use ($userId) {
+                ->hasWhere('members', function ($q) use ($userId) {
                     $q->where('user_id', $userId);
                 })
-                ->hasWhere('members', function($q) use ($targetId) {
+                ->hasWhere('members', function ($q) use ($targetId) {
                     $q->where('user_id', $targetId);
                 })
                 ->find();
@@ -199,47 +201,62 @@ class ConversationController extends Base
     }
 
     /**
-     * 获取会话列表
+     * 获取会话列表（分页 + 关联查询优化）
      */
     public function list(Request $request): Response
     {
+        // 获取请求参数
         $data = $request->get() + ['user_id' => $request->user['id']];
+
         $this->validate($data, ConversationValidate::class, 'list');
 
         $userId = $data['user_id'];
         $page = (int)($data['page'] ?? 1);
         $limit = (int)($data['limit'] ?? 20);
 
-        $members = ConversationMembers::where('user_id', $userId)
-            ->with(['conversation' => function($q){
+        // 关联 conversation 和 conversation->members->user，避免 N+1
+        $query = ConversationMembers::with([
+            'conversation' => function ($q) {
                 $q->where('is_active', 1)
                     ->with(['members.user']);
-            }])
-            ->page($page, $limit)
-            ->select();
+            }
+        ])->where('user_id', $userId);
+
+        // 分页
+        $members = $query->page($page, $limit)->select();
 
         $list = [];
+
         foreach ($members as $member) {
             $conv = $member->conversation;
             if (!$conv) continue;
 
+            // 获取最后一条消息（通过子查询优化）
             $lastMessage = Messages::where('conversation_id', $conv->id)
                 ->order('id', 'desc')
                 ->find();
 
+            $client_id = $lastMessage->id ?? '';
             $lastContent = $lastMessage->content ?? '';
-            $lastType = $lastMessage->type ?? 1;
-
+            $send_time = $lastMessage->created_at ?? '';
+            $message_type = $lastMessage->type ?? 1;
+            $status = $lastMessage->status ?? 1;
+            $send_id = $this->idToUuid($lastMessage->from_user_id);
+            $send_name = User::where('id', $send_id)->value('nickname');
+            // 未读数统计
             $unreadCount = Messages::where('conversation_id', $conv->id)
                 ->where('id', '>', $member->last_read_message_id ?? 0)
                 ->count();
 
+            $uuid = $conv->uuid;
             $name = $conv->name;
             $avatar = $conv->avatar;
+
+            // 单聊显示对方昵称头像
             if ($conv->type === 1) {
-                // 单聊显示对方昵称头像
                 foreach ($conv->members as $m) {
                     if ($m->user_id != $userId) {
+                        $uuid = $m->user->uuid ?? 'U';
                         $name = $m->user->nickname ?? '用户';
                         $avatar = $m->user->avatar ?? '';
                         break;
@@ -249,19 +266,31 @@ class ConversationController extends Base
 
             $list[] = [
                 'conversation_id' => $conv->id,
-                'type' => $conv->type,
-                'name' => $name,
-                'avatar' => $avatar,
-                'last_message' => $lastContent,
-                'last_message_type' => $lastType,
-                'unread_count' => $unreadCount
+                'conversation_type' => $conv->type,
+                'user' => [
+                    'uuid' => $uuid,
+                    'name' => $name,
+                    'avatar' => $avatar,
+                ],
+                'message' => [
+                    'client_id' => $client_id,
+                    'send_id' => $send_id,
+                    'send_name' => $send_name,
+                    'content' => $lastContent,
+                    'message_type' => $message_type,
+                    'send_time' => $send_time,
+                    'status' => $status,
+                ],
+                'unread_count' => $unreadCount,
             ];
         }
 
+        // 返回分页信息
         return $this->success([
             'list' => $list,
             'page' => $page,
-            'limit' => $limit
+            'limit' => $limit,
+            'total' => count($list),
         ]);
     }
 
@@ -290,18 +319,32 @@ class ConversationController extends Base
 
         // 获取会话消息，排除当前用户已删除的消息
         $messages = Messages::where('conversation_id', $conversationId)
-            ->whereNotIn('id', function($query) use ($userId) {
+            ->with('user')
+            ->whereNotIn('id', function ($query) use ($userId) {
                 $query->table((new MessageUserDeleted())->getTable()) // 使用模型类自动获取表名
                 ->where('user_id', $userId)
                     ->field('message_id');
             })
-            ->order('id', 'desc')
+            ->order('id', 'asc')
             ->page($page, $limit)
             ->select();
 
+        $formatMessages = [];
+        foreach ($messages as $message) {
+            $formatMessages[] = [
+                'id' => $message->id,
+                'send_id' => $message->user->uuid,
+                'send_avatar' => $message->user->avatar,
+                'send_nickname' => $message->user->nickname,
+                'content_type' => $message->type,
+                'content' => $message->content,
+                'send_time' => $message->created_at,
+            ];
+        }
+
         return $this->success([
             'conversation_id' => $conversationId,
-            'messages' => $messages
+            'messages' => $formatMessages
         ]);
     }
 }

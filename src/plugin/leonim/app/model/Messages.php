@@ -2,8 +2,10 @@
 
 namespace plugin\leonim\app\model;
 
-use think\model\relation\HasMany;
 use think\model\relation\BelongsTo;
+use think\model\relation\HasMany;
+use think\model\relation\HasOne;
+
 class Messages extends Base
 {
     protected string $table = 'wa_messages';
@@ -23,5 +25,10 @@ class Messages extends Base
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function user(): HasOne
+    {
+        return $this->hasOne(User::class, 'id', 'from_user_id');
     }
 }

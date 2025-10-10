@@ -7,9 +7,10 @@ use think\model\relation\BelongsTo;
 class MessageUserDeleted extends Base
 {
     protected $name = 'wa_message_user_deleted';
-    protected $autoWriteTimestamp = 'datetime';
-    protected $createTime = 'deleted_at';
-    protected $updateTime = false;
+    protected string $autoWriteTimestamp = 'datetime';
+
+    protected string $createTime = 'deleted_at';
+    protected bool $updateTime = false;
 
     public function user(): BelongsTo
     {

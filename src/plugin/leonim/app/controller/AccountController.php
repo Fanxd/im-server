@@ -31,7 +31,7 @@ class AccountController extends Base
 
         $this->validate($data, AccountValidate::class, 'login');
 
-        $user = User::where('mobile', $data['username'])->find();
+        $user = User::where('username', $data['username'])->find();
 
         if (!$user || !password_verify($data['password'], $user->password)) {
             return json(['code' => 401, 'msg' => '用户名或密码错误']);
@@ -50,8 +50,6 @@ class AccountController extends Base
             'uuid' => $user->uuid,
             'username' => $user->username
         ]);
-
-        $token['uuid'] = $user->uuid;
 
         return $this->success($token, '登入成功');
     }

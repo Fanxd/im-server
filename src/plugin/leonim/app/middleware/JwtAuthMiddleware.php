@@ -1,7 +1,7 @@
 <?php
+
 namespace plugin\leonim\app\middleware;
 
-use support\Log;
 use Tinywan\Jwt\Exception\JwtTokenException;
 use Tinywan\Jwt\JwtToken;
 use Webman\Http\Request;
@@ -58,7 +58,7 @@ class JwtAuthMiddleware implements MiddlewareInterface
             // 交给统一异常处理器（推荐）或直接返回 JSON
             return json([
                 'code' => 401,
-                'msg'  => $e->getMessage(),
+                'msg' => $e->getMessage(),
             ]);
         }
     }

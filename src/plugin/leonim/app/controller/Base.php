@@ -86,4 +86,9 @@ class Base
     {
         return User::uuidToId($uuid);
     }
+
+    protected function idToUuid($id)
+    {
+        return User::idToUuid($id);
+    }
 }
