@@ -15,4 +15,10 @@ class Friends extends Base
     {
         return $this->belongsTo(User::class, 'friend_id', 'id');
     }
+
+    // 关联用户表
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'friend_id', 'id');
+    }
 }

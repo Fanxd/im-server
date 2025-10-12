@@ -3,6 +3,12 @@ namespace plugin\leonim\gateway;
 
 use GatewayWorker\Lib\Gateway;
 use Workerman\Worker;
+use plugin\leonim\gateway\handler\{
+    LoginHandler,
+    MessageHandler,
+    FriendHandler,
+    HeartbeatHandler
+};
 
 class Events
 {
@@ -23,7 +29,6 @@ class Events
     public static function onMessage($client_id, $message): void
     {
         $data = json_decode($message, true);
-
         if (!$data) {
             Gateway::sendToClient($client_id, Response::fail('Invalid JSON'));
             return;
@@ -31,35 +36,26 @@ class Events
 
         $type = $data['type'] ?? '';
 
-        // ✅ 登录逻辑
+        // ✅ 登录逻辑独立
         if ($type === 'login') {
-            self::handleLogin($client_id, $data);
+            LoginHandler::handle($client_id, $data);
             return;
         }
 
-        // ✅ 非登录必须验证
+        // ✅ 校验是否已认证
         if (!Auth::isAuth($client_id)) {
             Gateway::sendToClient($client_id, Response::fail('Unauthorized', 401));
             return;
         }
 
-        switch ($type) {
-            case 'heartbeat':
-                Heartbeat::handle($client_id);
-                break;
-
-            case 'sendMessage':
-                Message::sendMsg($client_id, $data);
-                break;
-
-            case 'getUsersOnline':
-                Message::sendOnlineUsers($client_id);
-                break;
-
-            default:
-                Gateway::sendToClient($client_id, Response::fail("Unknown type: {$type}", 404));
-                break;
-        }
+        // ✅ 消息分发
+        match ($type) {
+            'heartbeat' => HeartbeatHandler::handle($client_id),
+            'sendMessage' => MessageHandler::send($client_id, $data),
+            'getUsersOnline' => MessageHandler::sendOnlineUsers($client_id),
+            'friendRequest' => FriendHandler::request($client_id, $data),
+            default => Gateway::sendToClient($client_id, Response::fail("Unknown type: {$type}", 404))
+        };
     }
 
     public static function onClose($client_id): void
@@ -71,28 +67,6 @@ class Events
             'client_id' => $client_id
         ]));
 
-        Message::broadcastOnlineUsers();
-    }
-
-    protected static function handleLogin($client_id, array $data): void
-    {
-        $userID = $data['uid'] ?? '';
-        $token  = $data['token'] ?? '';
-
-        if (!$userID || !Auth::verifyToken($token, $userID)) {
-            Gateway::sendToClient($client_id, Response::fail('Invalid token', 401));
-            Gateway::closeClient($client_id);
-            return;
-        }
-
-        Gateway::bindUid($client_id, $userID);
-        Auth::setAuth($client_id);
-
-        Gateway::sendToClient($client_id, Response::ok('loginSuccess', [
-            'userID' => $userID,
-            'token'  => $token
-        ]));
-
-        Message::broadcastOnlineUsers();
+        MessageHandler::broadcastOnlineUsers();
     }
 }

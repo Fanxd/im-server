@@ -1,21 +1,18 @@
 <?php
-namespace plugin\leonim\gateway;
+namespace plugin\leonim\gateway\handler;
 
 use GatewayWorker\Lib\Gateway;
 use plugin\leonim\app\model\User;
 use plugin\leonim\app\service\MessageService;
-use Tinywan\Jwt\JwtToken;
+use plugin\leonim\gateway\Response;
 
-class Message
+class MessageHandler
 {
-    /**
-     * ✅ 发送单聊/群聊消息
-     */
-    public static function sendMsg($client_id, array $data): void
+    public static function send(string $client_id, array $data): void
     {
         $msgType = $data['msgType'] ?? 'text';
-        $from    = Gateway::getUidByClientId($client_id);
-        $to      = $data['to'] ?? '';
+        $from = Gateway::getUidByClientId($client_id);
+        $to = $data['to'] ?? '';
         $groupID = $data['groupID'] ?? '';
         $content = $data['content'] ?? '';
         $chatId = $data['chatId'] ?? '';
@@ -37,6 +34,7 @@ class Message
                 'sender_name' => $user->nickname,
                 'sender_avatar' => $user->avatar
             ], // 消息发送者信息
+            'groupID' => $groupID
         ];
         // 写入数据库
         MessageService::saveMessage(
@@ -48,6 +46,8 @@ class Message
 
         // ✅ 群发
         if (!empty($groupID)) {
+            echo "群聊 to: { $groupID } content: { $content } \n";
+
             Gateway::sendToGroup($groupID, Response::ok('message', $msgData));
             return;
         }
@@ -63,25 +63,19 @@ class Message
         Gateway::sendToCurrentClient(Response::ok('message', $msgData));
     }
 
-    /**
-     * ✅ 单个客户端请求查看在线用户
-     */
-    public static function sendOnlineUsers($client_id): void
+    public static function sendOnlineUsers(string $client_id): void
     {
-        $onlineUids = Gateway::getAllUidList() ?: [];
+        $allUids = Gateway::getAllUidList();
         Gateway::sendToClient($client_id, Response::ok('onlineUsers', [
-            'users' => array_values($onlineUids),
+            'users' => array_values($allUids)
         ]));
     }
 
-    /**
-     * ✅ 广播在线列表
-     */
     public static function broadcastOnlineUsers(): void
     {
-        $onlineUids = Gateway::getAllUidList() ?: [];
+        $allUids = Gateway::getAllUidList();
         Gateway::sendToAll(Response::ok('onlineUsers', [
-            'users' => array_values($onlineUids),
+            'users' => array_values($allUids)
         ]));
     }
 

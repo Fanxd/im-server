@@ -10,59 +10,91 @@ use plugin\leonim\app\model\User;
 use plugin\leonim\app\validate\ConversationValidate;
 use support\Request;
 use support\Response;
+use think\facade\Db;
 
 class ConversationController extends Base
 {
-    /**
-     * 创建会话
-     */
     public function create(Request $request): Response
     {
         $data = $request->post() + ['user_id' => $request->user['id']];
         $this->validate($data, ConversationValidate::class, 'create');
 
         $userId = $data['user_id'];
-        $type = (int)$data['type'];
-        $targetId = (int)($this->uuidToId($data['target_id']) ?? 0);
+        $type = (int)($data['type'] ?? 1);
+        $targetUuid = $data['target_id'] ?? null;
 
-        // 单聊：检查是否已有会话
-        if ($type === 1) {
+        // -------------------------
+        // 单聊
+        // -------------------------
+        if ($type === 1 && $targetUuid) {
+            $targetId = (int)($this->uuidToId($targetUuid) ?? 0);
             $conversation = Conversations::where('type', 1)
-                ->hasWhere('members', function ($q) use ($userId) {
-                    $q->where('user_id', $userId);
+                ->whereIn('id', function ($q) use ($userId) {
+                    $q->name((new ConversationMembers())->getTable())
+                        ->field('conversation_id')
+                        ->where('user_id', $userId);
                 })
-                ->hasWhere('members', function ($q) use ($targetId) {
-                    $q->where('user_id', $targetId);
+                ->whereIn('id', function ($q) use ($targetId) {
+                    $q->name((new ConversationMembers())->getTable())
+                        ->field('conversation_id')
+                        ->where('user_id', $targetId);
                 })
                 ->find();
+
             if ($conversation) {
                 return $this->success(['conversation_id' => $conversation->id], '会话已存在');
             }
         }
 
+        // -------------------------
+        // 群聊成员处理
+        // -------------------------
+        $memberIds = [$userId]; // 默认包含创建者
+
+        if ($type !== 1 && $targetUuid) {
+            // 拆分字符串成数组
+            $uuidArr = explode(',', $targetUuid);
+            $uuidArr = array_unique($uuidArr); // 去重
+            foreach ($uuidArr as $uuid) {
+                $id = $this->uuidToId($uuid);
+                if ($id && !in_array($id, $memberIds)) {
+                    $memberIds[] = $id;
+                }
+            }
+        }
+
+        // -------------------------
+        // 群聊默认名称
+        // -------------------------
+        $name = $data['name'] ?? null;
+        if (!$name && $type !== 1) {
+            $names = User::whereIn('id', $memberIds)->limit(3)->column('nickname');
+            $name = implode('、', $names) . '的群聊';
+        }
+
+        // -------------------------
         // 创建会话
+        // -------------------------
         $conversation = Conversations::create([
             'type' => $type,
-            'name' => $data['name'] ?? '',
+            'name' => $name,
             'avatar' => $data['avatar'] ?? '',
-            'target_id' => $type === 1 ? $targetId : null,
+            'target_id' => null, // 群聊 target_id 可以为空
             'is_active' => 1
         ]);
 
-        // 创建会话成员
-        ConversationMembers::create([
-            'conversation_id' => $conversation->id,
-            'user_id' => $userId,
-            'role' => 3 // 创建者默认群主
-        ]);
-
-        if ($type === 1) {
-            ConversationMembers::create([
+        // -------------------------
+        // 插入成员
+        // -------------------------
+        $membersData = [];
+        foreach ($memberIds as $id) {
+            $membersData[] = [
                 'conversation_id' => $conversation->id,
-                'user_id' => $targetId,
-                'role' => 1
-            ]);
+                'user_id' => $id,
+                'role' => $id == $userId ? 3 : 1
+            ];
         }
+        ConversationMembers::insertAll($membersData);
 
         return $this->success(['conversation_id' => $conversation->id], '会话创建成功');
     }
@@ -205,9 +237,7 @@ class ConversationController extends Base
      */
     public function list(Request $request): Response
     {
-        // 获取请求参数
         $data = $request->get() + ['user_id' => $request->user['id']];
-
         $this->validate($data, ConversationValidate::class, 'list');
 
         $userId = $data['user_id'];
@@ -217,12 +247,10 @@ class ConversationController extends Base
         // 关联 conversation 和 conversation->members->user，避免 N+1
         $query = ConversationMembers::with([
             'conversation' => function ($q) {
-                $q->where('is_active', 1)
-                    ->with(['members.user']);
+                $q->where('is_active', 1)->with(['members.user']);
             }
         ])->where('user_id', $userId);
 
-        // 分页
         $members = $query->page($page, $limit)->select();
 
         $list = [];
@@ -231,18 +259,20 @@ class ConversationController extends Base
             $conv = $member->conversation;
             if (!$conv) continue;
 
-            // 获取最后一条消息（通过子查询优化）
+            // 获取最后一条消息
             $lastMessage = Messages::where('conversation_id', $conv->id)
                 ->order('id', 'desc')
                 ->find();
 
+            // 安全判断：可能为空
             $client_id = $lastMessage->id ?? '';
             $lastContent = $lastMessage->content ?? '';
             $send_time = $lastMessage->created_at ?? '';
             $message_type = $lastMessage->type ?? 1;
             $status = $lastMessage->status ?? 1;
-            $send_id = $this->idToUuid($lastMessage->from_user_id);
-            $send_name = User::where('id', $send_id)->value('nickname');
+            $send_id = $lastMessage ? $this->idToUuid($lastMessage->from_user_id) : '';
+            $send_name = $send_id ? User::where('id', $lastMessage->from_user_id)->value('nickname') : '';
+
             // 未读数统计
             $unreadCount = Messages::where('conversation_id', $conv->id)
                 ->where('id', '>', $member->last_read_message_id ?? 0)
@@ -285,7 +315,6 @@ class ConversationController extends Base
             ];
         }
 
-        // 返回分页信息
         return $this->success([
             'list' => $list,
             'page' => $page,
@@ -321,8 +350,8 @@ class ConversationController extends Base
         $messages = Messages::where('conversation_id', $conversationId)
             ->with('user')
             ->whereNotIn('id', function ($query) use ($userId) {
-                $query->table((new MessageUserDeleted())->getTable()) // 使用模型类自动获取表名
-                ->where('user_id', $userId)
+                $query->table((new MessageUserDeleted())->getTable())
+                    ->where('user_id', $userId)
                     ->field('message_id');
             })
             ->order('id', 'asc')
@@ -342,8 +371,23 @@ class ConversationController extends Base
             ];
         }
 
+        $type = Conversations::where('id', $conversationId)->value('type');
+
+        $members = $member; // 默认单聊返回当前用户所在记录
+        if ($type == 2) {
+            // 获取群聊成员 user_id 转 uuid，并用逗号拼接
+            $members = ConversationMembers::where('conversation_id', $conversationId)
+                ->column('user_id'); // 获取 user_id 数组
+            $members = array_map(function ($id) {
+                return User::where('id', $id)->value('uuid') ?? '';
+            }, $members);
+            $members = implode(',', $members); // 拼接成字符串
+        }
+
         return $this->success([
             'conversation_id' => $conversationId,
+            'conversation_type' => $type,
+            'conversation_members' => $members,
             'messages' => $formatMessages
         ]);
     }

@@ -198,49 +198,69 @@ class FriendController extends Base
      */
     public function list(Request $request): Response
     {
-        $userId      = $request->user['id'];
-        $keyword     = $request->get('keyword', '');
-        $page        = (int)$request->get('page', 1);
-        $limit       = (int)$request->get('limit', 10);
+        $userId = $request->user['id'];
+        $keyword = $request->get('keyword', '');
+        $page = (int)$request->get('page', 1);
+        $limit = (int)$request->get('limit', 10);
         $enableGroup = (int)$request->get('group', 0);
 
-        $query = Friends::alias('f')
-            ->join('wa_users u', 'u.id = f.friend_id')
-            ->where('f.user_id', $userId);
+        // 基础查询
+        $query = Friends::with(['user' => function ($q) use ($keyword) {
+            if ($keyword !== '') {
+                $q->whereLike('nickname', "%{$keyword}%");
+            }
+            $q->field('id, uuid, nickname, avatar'); // 只取必要字段
+        }])->where('user_id', $userId);
 
+        // 备注 / 分组 / 标签 搜索
         if ($keyword !== '') {
             $query->where(function ($q) use ($keyword) {
-                $q->whereLike('u.nickname', "%{$keyword}%")
-                    ->whereOrLike('f.remark', "%{$keyword}%")
-                    ->whereOrLike('f.group_name', "%{$keyword}%");
+                $q->whereLike('remark', "%{$keyword}%")
+                    ->whereOrLike('group_name', "%{$keyword}%")
+                    ->whereOrLike('tags', "%{$keyword}%");
             });
         }
 
+        // 总数
         $total = $query->count();
-        $list = $query->page($page, $limit)
-            ->order('f.id', 'desc')
-            ->field('f.id, f.remark, f.group_name, f.tags, u.nickname, u.avatar, u.uuid')
+
+        // 分页
+        $list = $query->order('id', 'desc')
+            ->page($page, $limit)
             ->select();
 
+        // 不分组直接返回
         if ($enableGroup !== 1) {
+            $result = $list->map(function ($item) {
+                return [
+                    'friend_uuid' => $item->user->uuid,
+                    'uuid' => $item->user->uuid,
+                    'nickname' => $item->user->nickname,
+                    'avatar' => $item->user->avatar,
+                    'remark' => $item->remark,
+                    'tags' => $item->tags,
+                    'group_name' => $item->group_name,
+                ];
+            });
+
             return $this->success([
                 'total' => $total,
-                'page'  => $page,
+                'page' => $page,
                 'limit' => $limit,
-                'list'  => $list,
+                'list' => $result,
             ]);
         }
 
         // 按分组返回
         $grouped = [];
         foreach ($list as $item) {
-            $groupName = $item->group_name ?: '默认分组';
-            $grouped[$groupName][] = [
-                'friend_uuid' => $item->uuid,
-                'nickname'    => $item->nickname,
-                'avatar'      => $item->avatar,
-                'remark'      => $item->remark,
-                'tags'        => $item->tags,
+            $group = $item->group_name ?: '默认分组';
+            $grouped[$group][] = [
+                'friend_uuid' => $item->user->uuid,
+                'nickname' => $item->user->nickname,
+                'avatar' => $item->user->avatar,
+                'remark' => $item->remark,
+                'tags' => $item->tags,
             ];
         }
 
