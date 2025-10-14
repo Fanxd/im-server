@@ -2,7 +2,6 @@
 namespace plugin\leonim\app\service;
 
 use plugin\leonim\app\model\Messages;
-use plugin\leonim\app\model\WaMessage;
 
 class MessageService
 {
@@ -15,7 +14,7 @@ class MessageService
      * @param int $status
      * @return Messages
      */
-    public static function saveMessage(int|string $conversationId, int|string $fromUserId, int $type, string $content, int $status = 1)
+    public static function saveMessage(int|string $conversationId, int|string $fromUserId, int $type, string $content, int $status = 1): Messages
     {
         $message = new Messages();
         $message->conversation_id = $conversationId;

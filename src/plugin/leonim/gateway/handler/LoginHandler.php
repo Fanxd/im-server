@@ -1,33 +1,35 @@
 <?php
-
 namespace plugin\leonim\gateway\handler;
 
 use GatewayWorker\Lib\Gateway;
+use plugin\leonim\app\model\User;
 use plugin\leonim\gateway\Response;
-use plugin\leonim\gateway\Auth;
-use plugin\leonim\gateway\handler\MessageHandler;
 
 class LoginHandler
 {
-    public static function handle(string $client_id, array $data): void
+    public static function handle(string $client_id, array $data, ?string $requestId = null): void
     {
-        $userID = $data['uid'] ?? '';
-        $token = $data['token'] ?? '';
 
-        if (!$userID || !Auth::verifyToken($token, $userID)) {
-            Gateway::sendToClient($client_id, Response::fail('Invalid token', 401));
-            Gateway::closeClient($client_id);
+        $user = User::where('uuid', $data['uid'])->findOrEmpty();
+
+        if ($user->isEmpty()) {
+            Gateway::sendToClient($client_id, Response::make('login', $requestId, 404, 'User not found'));
             return;
         }
 
-        Gateway::bindUid($client_id, $userID);
-        Auth::setAuth($client_id);
+        $userInfo = [
+            'uuid' => $user->uuid,
+            'username' => $user->username,
+            'nickname' => $user->nickname,
+            'avatar' => $user->avatar,
+            'email' => $user->email,
+            'created_at' => $user->created_at,
+        ];
 
-        Gateway::sendToClient($client_id, Response::ok('loginSuccess', [
-            'userID' => $userID,
-            'token' => $token
-        ]));
+        // 发送登录成功响应
+        Gateway::sendToClient($client_id, Response::make('login', $requestId, 200, 'Login success', $userInfo));
 
+        // 广播当前在线用户列表
         MessageHandler::broadcastOnlineUsers();
     }
 }

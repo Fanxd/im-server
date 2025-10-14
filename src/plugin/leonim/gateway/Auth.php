@@ -2,6 +2,7 @@
 namespace plugin\leonim\gateway;
 
 use Tinywan\Jwt\Exception\JwtTokenException;
+use Tinywan\Jwt\Exception\JwtTokenExpiredException;
 use Tinywan\Jwt\JwtToken;
 
 /**
@@ -17,24 +18,30 @@ class Auth
     protected static array $clientAuthStatus = [];
 
     /**
-     * 验证 token 是否有效
+     * 验证 token 是否有效，并返回 token 中的用户标识
      * @param string $token
-     * @param string $userID
-     * @return bool
+     * @return string|false 返回用户 uuid 或 userId，验证失败返回 false
      */
-    public static function verifyToken(string $token, string $userID): bool
+    public static function verifyToken(string $token): bool|string
     {
-        if (empty($token) || empty($userID)) {
+        if (empty($token)) {
             return false;
         }
 
-         $verify = JwtToken::verify(1, $token);
-
-        if (empty($verify)) {
-           return false;
-        }else {
-            return $verify['extend']['uuid'] === $userID;
+        try {
+            $verify = JwtToken::verify(1, $token);
+        } catch (JwtTokenExpiredException $e) {
+            // token 过期，返回 false
+            return false;
+        } catch (JwtTokenException $e) {
+            // 其他 jwt 异常，返回 false
+            return false;
         }
+        if (empty($verify)) {
+            return false;
+        }
+
+        return $verify['extend']['uuid'] ?? $verify['userId'] ?? false;
     }
 
     /**

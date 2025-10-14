@@ -7,47 +7,23 @@ namespace plugin\leonim\gateway;
 class Response
 {
     /**
-     * ✅ 成功响应
-     * @param string $event
-     * @param array|null $data
-     * @param string $message
-     * @return string
-     */
-    public static function ok(string $event, array $data = null, string $message = 'success'): string
-    {
-        return self::format($event, $data, 0, $message);
-    }
-
-    /**
-     * ✅ 失败响应
-     * @param string $event
-     * @param string $message
-     * @param int $code
-     * @param array|null $data
-     * @return string
-     */
-    public static function fail(string $message = 'error', int $code = 400, array $data = null, string $event = 'error'): string
-    {
-        return self::format($event, $data, $code, $message);
-    }
-
-    /**
-     * ✅ 统一格式封装
-     * @param string $event
-     * @param array|null $data
+     * 构建统一 WebSocket 消息格式
+     * @param string $action
+     * @param string|null $requestId
      * @param int $code
      * @param string $message
+     * @param array $data
      * @return string
      */
-    public static function format(string $event, array $data = null, int $code = 0, string $message = ''): string
+    public static function make(string $action, ?string $requestId, int $code, string $message, array $data = []): string
     {
         $response = [
-            'event'   => $event,
-            'code'    => $code,
+            'action' => $action,
+            'requestId' => $requestId,
+            'code' => $code,
             'message' => $message,
-            'data'    => $data ?? new \stdClass(),
+            'data' => $data ?? new \stdClass(),
         ];
-
         return json_encode($response, JSON_UNESCAPED_UNICODE);
     }
 }
