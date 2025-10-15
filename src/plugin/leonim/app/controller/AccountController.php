@@ -138,8 +138,12 @@ class AccountController extends Base
         // 获取参数
         $data = $this->input($request, ['username' => '', 'password' => '']);
 
-        // 参数验证
         $this->validate($data, AccountValidate::class, 'register');
+
+        // 判断用户名是否已存在
+        if (User::where('username', $data['username'])->count() > 0) {
+            return $this->fail('用户名已存在');
+        }
 
         // 生成默认 uuid、nickname、status=0
         $uuid = uniqid();
