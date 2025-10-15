@@ -12,7 +12,7 @@ class JwtAuthMiddleware implements MiddlewareInterface
 {
     // 允许不验证 Token 的方法
     protected array $exceptActions = [
-        'login', // 登录接口不拦截
+        'login', 'register' // 登录接口不拦截
     ];
 
     public function process(Request $request, callable $next): Response

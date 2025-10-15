@@ -12,9 +12,10 @@ use support\Request;
 // Leon IM 相关路由
 Route::group('/app/im', function () {
     // ------------------------
-    // 登入
+    // 登入注册
     // ------------------------
     Route::post('/login', [AccountController::class, 'login']);
+    Route::post('/register', [AccountController::class, 'register']);
 
     // ------------------------
     // 用户接口

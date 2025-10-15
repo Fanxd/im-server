@@ -128,4 +128,43 @@ class AccountController extends Base
         return $this->success($data);
     }
 
+    /**
+     * 用户注册
+     * @param Request $request
+     * @return Response
+     */
+    public function register(Request $request): Response
+    {
+        // 获取参数
+        $data = $this->input($request, ['username' => '', 'password' => '']);
+
+        // 参数验证
+        $this->validate($data, AccountValidate::class, 'register');
+
+        // 生成默认 uuid、nickname、status=0
+        $uuid = uniqid();
+        $nickname = $data['username'];
+        $status = 0;
+        $passwordHash = password_hash($data['password'], PASSWORD_DEFAULT); // 密码加密
+
+        // 保存用户到数据库
+        $user = new User();
+        $user->uuid = $uuid;
+        $user->username = $data['username'];
+        $user->nickname = $nickname;
+        $user->password = $passwordHash;
+        $user->status = $status;
+        $user->save();
+
+        // 返回成功信息及用户基本信息
+        $info = [
+            'uuid' => $uuid,
+            'username' => $data['username'],
+            'nickname' => $nickname
+        ];
+        return $this->success($info, '注册成功');
+    }
+
 }
+
+
