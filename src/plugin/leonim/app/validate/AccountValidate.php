@@ -3,11 +3,12 @@
 namespace plugin\leonim\app\validate;
 
 use Tinywan\Validate\Validate;
+use plugin\leonim\app\model\User;
 
 class AccountValidate extends Validate
 {
     protected array $rule = [
-        'username' => 'require|length:3,20|unique:wa_users,username',
+        'username' => 'require|length:3,20',
         'nickname' => 'require',
         'password' => 'require|length:6,32',
         'email' => 'email',
@@ -29,6 +30,21 @@ class AccountValidate extends Validate
         'login' => ['username', 'password'],
         'update' => ['nickname', 'email', 'mobile'],
         'password' => ['password'],
-        'register' => ['username', 'password'],
+        'register' => ['username' => 'require|length:3,20|checkUsernameUnique', 'password'],
     ];
+
+    /**
+     * 检查用户名是否唯一
+     * @param $value
+     * @return bool|string
+     */
+    protected function checkUsernameUnique($value): bool|string
+    {
+        if (User::where('username', $value)->count() > 0) {
+            return '用户名已存在';
+        }
+        return true;
+    }
 }
+
+
