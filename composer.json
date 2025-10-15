@@ -1,5 +1,6 @@
 {
   "name": "leonim/im-server",
+  "version": "1.0.0",
   "description": "im-server",
   "type": "library",
   "license": "MIT",
