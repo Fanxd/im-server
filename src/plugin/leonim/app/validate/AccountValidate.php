@@ -7,7 +7,7 @@ use Tinywan\Validate\Validate;
 class AccountValidate extends Validate
 {
     protected array $rule = [
-        'username' => 'require|length:3,20|unique:users,username',
+        'username' => 'require|length:3,20|unique:wa_users,username',
         'nickname' => 'require',
         'password' => 'require|length:6,32',
         'email' => 'email',
